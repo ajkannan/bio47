@@ -41,10 +41,10 @@ def kmer_barchart(data, k = 15, remove_low_complexity = True):
 
 	condensed_list = []
 	for key in freqs:
-		if freqs[key] > 1000:
+		if freqs[key] > 3000:
 			condensed_list.append((key, freqs[key]))
 
-	print len(condensed_list)
+	print condensed_list
 	fig = plt.figure()
 	width = .35
 	ind = np.arange(len(condensed_list))
@@ -53,7 +53,7 @@ def kmer_barchart(data, k = 15, remove_low_complexity = True):
 	plt.xticks(ind + width / 2, [kmer[0] for kmer in condensed_list])
 	
 	fig.autofmt_xdate()
-	plt.show()
+	#plt.show()
 	plt.savefig("kmer_barchart.pdf")
 
 def read_data():
@@ -94,6 +94,6 @@ def read_data():
 	return pruned_seqs
 
 if __name__ == "__main__":
-	#kmer_barchart(read_data())
+	kmer_barchart(read_data())
 	#run_pca(Xtest)
-	kmer_features(read_data())
+	#kmer_features(read_data())
