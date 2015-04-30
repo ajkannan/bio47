@@ -1,36 +1,63 @@
+# Ideas: levenschtein match kmer features with partial points
+# Remove from the dataset sequences that are too similar
+
 import numpy as np
 from pprint import pprint
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale, normalize
+from sklearn.cross_validation import train_test_split
 
-# Tests
 from sklearn import datasets
 iris = datasets.load_iris()
-Xtest = iris.data
-
+irisX = iris.data  # we only take the first two features.
+irisY = iris.target
 
 def run_pca(X, dims = 2):
-	Xnorm = scale(X, axis = 0)
+	labels = np.array([str(i) for i in xrange(X.shape[0])])
+	Xtrain, Xtest, train_labels, test_labels = train_test_split(X, labels, test_size = 1000, train_size = 3000)
+	Xnorm = normalize(Xtrain, axis = 1)
+	Xnorm = scale(Xnorm, axis = 0)
 	pca = PCA(n_components = dims)
 	X_proj = pca.fit_transform(Xnorm)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
 	plt.scatter(X_proj[:,0], X_proj[:,1])
+	for i in xrange(X_proj.shape[0]):
+		ax.annotate(train_labels[i], (X_proj[i,0], X_proj[i,1]))
+	plt.xlabel("PCA Dimension 1")
+	plt.ylabel("PCA Dimension 2")
+	plt.title("Cluster Analysis")
 	plt.show()
 	print "Explained_variance ratio: ", pca.explained_variance_ratio_
 
 def kmer_features(data, k = 9):
-	order_and_freq = {} # key, (position in feature vector, frequency)
+	# Threshold kmers based on frequency
+	freq_thresh = 7000
+	kmer_freqs = {}
 	for rna in data:
 		for i in xrange(len(rna) - k + 1):
 			kmer = rna[i:i + k]
-			if kmer not in ordering:
-				order_and_freq[kmer] = [len(order_and_freq), 1]
-			else:
-				order_and_freq[kmer][1] += 1.0
+			if kmer not in kmer_freqs:
+				kmer_freqs[kmer] = 0.0
+			kmer_freqs[kmer] += 1.0
 
-	print ordering[:15]
+	order = {} # key, position in feature vector
+	for key in kmer_freqs:
+		if kmer_freqs[key] > freq_thresh:
+			order[key] = len(order)
+	print len(order)
+	X = np.zeros((len(data), len(order)))
+	for i in xrange(len(data)):
+		rna = data[i]
+		for i in xrange(len(rna) - k + 1):
+			kmer = rna[i:i + k]
+			if kmer in order:
+				X[i, order[kmer]] += 1.0
+	return X
 
-def kmer_barchart(data, k = 15, remove_low_complexity = True):
+def kmer_barchart(data, k = 9, remove_low_complexity = True):
 	freqs = {}
 	for rna in data:
 		for i in xrange(len(rna) - k + 1):
@@ -76,11 +103,9 @@ def read_data():
 			indices[-1].append([int(i.strip()) for i in line.split('-')])
 
 	pruned_seqs = []
-	count = 0
 	for i, rna in enumerate(data):
 		if 'N' in rna:
-			count += 1
-			continue
+			continue # Occurs 39 times in high confidence dataset
 		curr_seq = ''
 		start_i = 0
 		for lcr in indices[i]:
@@ -90,10 +115,10 @@ def read_data():
 		curr_seq += rna[start_i:]
 		pruned_seqs.append(curr_seq)
 
-	print count
 	return pruned_seqs
 
 if __name__ == "__main__":
-	kmer_barchart(read_data())
-	#run_pca(Xtest)
-	#kmer_features(read_data())
+	#kmer_barchart(read_data())
+	X = kmer_features(read_data())
+	run_pca(X)
+	#run_pca(irisX)
